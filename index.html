@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>うどんこねるゲーム</title>
-  <link rel="icon" href="img/favicon.ico">
+  <link rel="icon" href="favicon.ico">
 <style>
   :root { --bg:#fffaf3; --ink:#2b2b2b; --accent:#ffb703; --accent2:#8ecae6; --good:#2a9d8f; --warn:#e76f51; }
   html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN","Yu Gothic UI","Noto Sans JP","Noto Sans CJK JP",sans-serif}
@@ -300,11 +300,36 @@
   }
   requestAnimationFrame(loop);
 
-  // タブ非表示→表示の差分も正しくカウント
-  document.addEventListener('visibilitychange', ()=>{
+
+
+//変更場所↓
+// タブ非表示↔表示でも実時間差分を正しくカウント
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    // 隠れた時刻を保存（参照用）
     localStorage.setItem(KEY.lastStamp, Date.now());
-    lastStamp = Number(localStorage.getItem(KEY.lastStamp));
-  });
+  } else {
+    // 目視可能に戻ったら、隠れていた間の経過秒をまとめて加算
+    const prev = Number(localStorage.getItem(KEY.lastStamp) || Date.now());
+    const now  = Date.now();
+    const deltaSec = Math.max(0, Math.floor((now - prev) / 1000));
+
+    // 日付跨ぎにも対応（JST判定）
+    dailyRolloverCheck();
+
+    if (!isLocked()) {
+      usedSec = Math.min(DAILY_LIMIT_SEC, usedSec + deltaSec);
+    }
+
+    lastStamp = now;
+    localStorage.setItem(KEY.usedSec, usedSec);
+    localStorage.setItem(KEY.lastStamp, lastStamp);
+    localStorage.setItem(KEY.jstDate, savedDate);
+  }
+});
+//変更場所↑
+
+
 
   // ボタン
   btnReset.addEventListener('click', ()=>{
