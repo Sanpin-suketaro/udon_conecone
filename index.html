@@ -133,17 +133,26 @@
   dailyRolloverCheck();
 
   // 実時間差分で使用時間を加算
-  function accruePlaytime(){
-    dailyRolloverCheck();
-    const now = Date.now();
-    const delta = Math.max(0, Math.floor((now - lastStamp)/1000));
+function accruePlaytime(){
+  dailyRolloverCheck();
+  const now = Date.now();
+
+  if (isLocked()) {               // ロック中は印だけ更新
     lastStamp = now;
-    if(!isLocked()){ // すでにロック時はカウントしない
-      usedSec = Math.min(DAILY_LIMIT_SEC, usedSec + delta);
-    }
+    localStorage.setItem(KEY.lastStamp, lastStamp);
+    return;
+  }
+
+  const elapsedMs = now - lastStamp;
+  if (elapsedMs >= 1000) {
+    const delta = Math.floor(elapsedMs / 1000); // 経過「整数秒」
+    usedSec = Math.min(DAILY_LIMIT_SEC, usedSec + delta);
+    lastStamp += delta * 1000;    // 端数msを次回に繰り越す（←ここが大事）
     localStorage.setItem(KEY.usedSec, usedSec);
     localStorage.setItem(KEY.lastStamp, lastStamp);
   }
+}
+
 
   function isLocked(){ return usedSec >= DAILY_LIMIT_SEC; }
 
